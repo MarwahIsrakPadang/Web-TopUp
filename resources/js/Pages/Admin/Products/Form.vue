@@ -1,0 +1,215 @@
+<script setup>
+import { computed } from 'vue'
+import { useForm } from '@inertiajs/vue3'
+import { useDirtyWarning } from '@/Composables/useDirtyWarning'
+import AdminLayout from '@/Layouts/AdminLayout.vue'
+
+const props = defineProps({
+    product: { type: Object, default: null },
+    games: { type: Array, required: true },
+})
+
+const isEdit = !!props.product
+
+const form = useForm({
+    game_id: props.product?.game_id ?? '',
+    category_id: props.product?.category_id ?? '',
+    name: props.product?.name ?? '',
+    slug: props.product?.slug ?? '',
+    type: props.product?.type ?? 'package',
+    price: props.product?.price ?? '',
+    original_price: props.product?.original_price ?? '',
+    description: props.product?.description ?? '',
+    icon: null,
+    status: props.product?.status ?? 'active',
+    sort_order: props.product?.sort_order ?? 0,
+})
+
+useDirtyWarning(form)
+
+const filteredCategories = computed(() => {
+    const game = props.games.find(g => g.id === Number(form.game_id))
+    return game?.categories ?? []
+})
+
+function onGameChange() {
+    form.category_id = ''
+}
+
+function submit() {
+    if (isEdit) {
+        form.put(route('admin.products.update', props.product.id), {
+            forceFormData: true,
+            preserveScroll: true,
+        })
+    } else {
+        form.post(route('admin.products.store'), {
+            preserveScroll: true,
+        })
+    }
+}
+</script>
+
+<template>
+    <AdminLayout>
+        <div class="mx-auto max-w-2xl">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {{ isEdit ? 'Edit Produk' : 'Tambah Produk' }}
+            </h1>
+            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                {{ isEdit ? 'Perbarui informasi produk.' : 'Tambahkan produk baru.' }}
+            </p>
+
+            <form @submit.prevent="submit" class="mt-6 space-y-6">
+                <div class="rounded-xl bg-white p-6 shadow-sm dark:bg-gray-800">
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Game <span class="text-red-500">*</span></label>
+                                <select
+                                    v-model="form.game_id"
+                                    @change="onGameChange"
+                                    class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                                    :class="{ 'border-red-500': form.errors.game_id }"
+                                >
+                                    <option value="">Pilih Game</option>
+                                    <option v-for="game in games" :key="game.id" :value="game.id">{{ game.name }}</option>
+                                </select>
+                                <p v-if="form.errors.game_id" class="mt-1 text-sm text-red-600">{{ form.errors.game_id }}</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Kategori</label>
+                                <select
+                                    v-model="form.category_id"
+                                    class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                                >
+                                    <option value="">Tidak Ada</option>
+                                    <option v-for="cat in filteredCategories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nama Produk <span class="text-red-500">*</span></label>
+                            <input
+                                v-model="form.name"
+                                type="text"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                                :class="{ 'border-red-500': form.errors.name }"
+                            />
+                            <p v-if="form.errors.name" class="mt-1 text-sm text-red-600">{{ form.errors.name }}</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Slug <span class="text-red-500">*</span></label>
+                            <input
+                                v-model="form.slug"
+                                type="text"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                                :class="{ 'border-red-500': form.errors.slug }"
+                            />
+                            <p v-if="form.errors.slug" class="mt-1 text-sm text-red-600">{{ form.errors.slug }}</p>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipe <span class="text-red-500">*</span></label>
+                                <select
+                                    v-model="form.type"
+                                    class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                                >
+                                    <option value="package">Paket</option>
+                                    <option value="manual">Manual</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status <span class="text-red-500">*</span></label>
+                                <select
+                                    v-model="form.status"
+                                    class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                                >
+                                    <option value="active">Aktif</option>
+                                    <option value="inactive">Nonaktif</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Harga <span class="text-red-500">*</span></label>
+                                <input
+                                    v-model="form.price"
+                                    type="number"
+                                    min="0"
+                                    class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                                    :class="{ 'border-red-500': form.errors.price }"
+                                />
+                                <p v-if="form.errors.price" class="mt-1 text-sm text-red-600">{{ form.errors.price }}</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Harga Asli (coret)</label>
+                                <input
+                                    v-model="form.original_price"
+                                    type="number"
+                                    min="0"
+                                    class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                                    :class="{ 'border-red-500': form.errors.original_price }"
+                                />
+                                <p v-if="form.errors.original_price" class="mt-1 text-sm text-red-600">{{ form.errors.original_price }}</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Deskripsi</label>
+                            <textarea
+                                v-model="form.description"
+                                rows="3"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                            ></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Ikon</label>
+                            <input
+                                type="file"
+                                accept="image/png,image/jpg,image/jpeg,image/webp"
+                                @input="form.icon = $event.target.files[0]"
+                                class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-primary-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-700 hover:file:bg-primary-100 dark:text-gray-400 dark:file:bg-primary-900/50 dark:file:text-primary-300"
+                            />
+                            <p v-if="form.errors.icon" class="mt-1 text-sm text-red-600">{{ form.errors.icon }}</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Urutan</label>
+                            <input
+                                v-model="form.sort_order"
+                                type="number"
+                                min="0"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3">
+                    <a
+                        :href="route('admin.products.index')"
+                        class="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                        Batal
+                    </a>
+                    <button
+                        type="submit"
+                        class="rounded-lg bg-primary-600 px-6 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:opacity-50"
+                        :disabled="form.processing"
+                    >
+                        {{ form.processing ? 'Menyimpan...' : (isEdit ? 'Simpan Perubahan' : 'Tambah Produk') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </AdminLayout>
+</template>

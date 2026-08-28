@@ -1,0 +1,110 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: topup-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - .:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+    networks:
+      - topup-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: topup-app
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/var/www/html
+      - ./docker/php/www.conf:/usr/local/etc/php-fpm.d/www.conf
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - topup-network
+    environment:
+      - PHP_IDE_CONFIG=serverName=topup
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=topup
+      - DB_USERNAME=topup_user
+      - DB_PASSWORD=topup_password
+
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: topup-queue
+    command: php artisan queue:work --tries=3 --delay=10
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - topup-network
+    restart: unless-stopped
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=topup
+      - DB_USERNAME=topup_user
+      - DB_PASSWORD=topup_password
+
+  mysql:
+    image: mysql:8.0
+    container_name: topup-mysql
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: topup
+      MYSQL_USER: topup_user
+      MYSQL_PASSWORD: topup_password
+    networks:
+      - topup-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: topup-phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: topup_user
+      PMA_PASSWORD: topup_password
+    networks:
+      - topup-network
+      
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: topup-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - topup-network
+
+volumes:
+  mysql_data:
+
+networks:
+  topup-network:
+    driver: bridge
